@@ -1,0 +1,48 @@
+{
+  "name": "dancedance",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "build:watch": "tsc -w",
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts"
+  },
+  "author": "Jehy<npm@jehy.ru>",
+  "repository": "https://github.com/jehy/dancedance.git",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "0.24.0",
+    "cli-progress": "3.9.1",
+    "debug": "4.3.2",
+    "form-data": "4.0.0",
+    "fs-extra": "10.0.0",
+    "glob": "7.2.0",
+    "jsmediatags": "3.9.7",
+    "promise.map": "0.3.1",
+    "sharp": "0.29.2",
+    "to-flags": "0.2.0",
+    "unzipper": "0.10.11",
+    "yargs": "17.2.1"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "3.9.2",
+    "@types/form-data": "2.5.0",
+    "@types/fs-extra": "9.0.13",
+    "@types/glob": "7.2.0",
+    "@types/jsmediatags": "3.9.3",
+    "@types/sharp": "0.29.2",
+    "@types/tmp": "0.2.2",
+    "@types/unzipper": "0.10.4",
+    "@types/yargs": "17.0.5",
+    "@typescript-eslint/eslint-plugin": "5.2.0",
+    "@typescript-eslint/parser": "5.2.0",
+    "eslint": "8.1.0",
+    "eslint-config-airbnb-base": "14.2.1",
+    "eslint-config-airbnb-typescript": "14.0.1",
+    "eslint-plugin-import": "2.25.2",
+    "typescript": "4.4.4"
+  }
+}

@@ -37,8 +37,7 @@ async function resizeForStepMania(originalImagePath: string, imagePath: string):
     .toFile(imagePath);
 }
 
-async function addBackgroundToSm(songDir:string, imageFileName: string): Promise<void>{
-
+async function addBackgroundToSm(songDir:string, imageFileName: string): Promise<void> {
   const smFiles = await getSmFiles(songDir);
   if (!smFiles.length) {
     console.log(`Sm file in ${songDir} not found!`);

@@ -17,7 +17,8 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "prepare": "husky install",
-    "pre-commit": "lint-staged"
+    "pre-commit": "lint-staged",
+    "prepublishOnly": "npm run lint && npm run build"
   },
   "author": "Jehy<npm@jehy.ru>",
   "repository": "https://github.com/jehy/dancedance.git",

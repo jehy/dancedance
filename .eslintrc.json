@@ -10,6 +10,7 @@
         "no-plusplus": "off",
         "no-await-in-loop": "off",
         "no-mixed-operators": "off",
+        "import/prefer-default-export": "warn",
         "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }]
     }
 }

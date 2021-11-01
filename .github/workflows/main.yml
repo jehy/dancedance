@@ -1,22 +1,38 @@
 name: Test
 on:
   push:
-    branches:
-      - master
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        node_version:
+          - 14
+          - 16
+          - 17
+        architecture:
+          - x64
+    name: Node ${{ matrix.node_version }} - ${{ matrix.architecture }} on ${{ matrix.os }}
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v2.3.1 # If you're using actions/checkout@v2 you must set persist-credentials to false in most cases for the deployment to work correctly.
+      - name: fix line ending for windows
+        run: git config --global core.autocrlf false && git config --global core.eol lf
+
+      - uses: actions/checkout@v2
+      - name: Setup node
+        uses: actions/setup-node@v2
         with:
-          persist-credentials: false
+          node-version: ${{ matrix.node_version }}
+          architecture: ${{ matrix.architecture }}
 
-      - name: Install and Build 🔧 # This example project is built using npm and outputs the result to the 'build' folder. Replace with the commands required to build your project, or remove this step entirely if your site is pre-built.
-        run: |
-          npm ci
-          npm run build
+      - name: install
+        run: npm ci
 
-      - name: Check lint 🔧
-        run: |
-          npm run lint
+      - name: build
+        run: npm run build
+
+      - name: lint
+        run: npm run lint

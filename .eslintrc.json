@@ -11,6 +11,7 @@
         "no-await-in-loop": "off",
         "no-mixed-operators": "off",
         "import/prefer-default-export": "warn",
+        "linebreak-style": ["error", "unix"],
         "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports" }]
     }
 }

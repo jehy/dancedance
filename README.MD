@@ -1,5 +1,8 @@
 # DanceDance
 
+
+![test](https://github.com/jehy/dancedance/workflows/Test/badge.svg)
+
 Stepmania SM file genarator CLI.
 
 ## Installation

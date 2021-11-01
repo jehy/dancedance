@@ -82,7 +82,7 @@ export async function run(args: Input) {
   const client = getAxiosInstance(args);
   const progress = new SingleBar({
     format: 'Converting {songName} [{bar}] {percentage}% '
-            + '| ETA: {eta_formatted} | spent {duration} | done {value}/{total}',
+            + '| ETA: {eta_formatted} | spent {duration_formatted} | done {value}/{total}',
   }, Presets.shades_classic);
   progress.start(plan.length, 0);
 

@@ -3,6 +3,6 @@ node_modules/
 config/runtime.json
 build
 dist
-*.js
+src/*.js
 *.js.map
 tmp

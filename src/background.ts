@@ -3,7 +3,7 @@ import type { PictureType } from 'jsmediatags/types';
 import jsMediaTags from 'jsmediatags';
 import path from 'path';
 import sharp from 'sharp';
-import { getSmFiles } from './util';
+import { getSmFile } from './util';
 
 async function exportPictoreFromMp3(inputMp3: string, outputDir: string):
 Promise<{ imageFormat: string, imgPath: string } | null> {
@@ -38,12 +38,11 @@ async function resizeForStepMania(originalImagePath: string, imagePath: string):
 }
 
 async function addBackgroundToSm(songDir:string, imageFileName: string): Promise<void> {
-  const smFiles = await getSmFiles(songDir);
-  if (!smFiles.length) {
+  const smFile = await getSmFile(songDir);
+  if (!smFile) {
     console.log(`Sm file in ${songDir} not found!`);
     throw new Error('SM file not found');
   }
-  const smFile = smFiles[0];
   const smData = await fse.readFile(smFile, { encoding: 'utf8' });
   const newData = smData.split('\n');
   newData.unshift(`#${imageFileName};`);

@@ -8,13 +8,15 @@ import fse from 'fs-extra';
 import unzipper from 'unzipper';
 import { pipeline } from 'stream';
 import promiseMap from 'promise.map';
+// @ts-ignore
 import type { Input } from './input';
-import { argv } from './input';
 import { maybeSetBackground } from './background';
 import { getAxiosInstance } from './http';
-import { getSmFiles } from './util';
+import { getMp3File, getSmFile } from './util';
+import { getSongName } from './normalizeName';
 
 // const log = Debug('dancedance:run');
+const pipelineAsync = promisify(pipeline);
 
 type TrackPlan = {
   from: string,
@@ -23,8 +25,20 @@ type TrackPlan = {
   toPath: string,
   songName: string,
   songPath: string,
-  smFiles: boolean,
+  smFilesExist: boolean,
 };
+
+async function buggyCheck(songPath: string) {
+// unzipper is buggy and exists before flushing on disk :(
+  for (let i = 0; i < 5; i++) {
+    const mp3File = await getMp3File(songPath);
+    const smFile = await getSmFile(songPath);
+    if (mp3File && smFile) {
+      return;
+    }
+    await promisify(setTimeout)(i * 100);
+  }
+}
 
 async function convertTrack(client: AxiosInstance, entry: TrackPlan, progress: SingleBar) {
   progress.update({ songName: entry.songName });
@@ -37,7 +51,21 @@ async function convertTrack(client: AxiosInstance, entry: TrackPlan, progress: S
     },
   });
   const unzip = unzipper.Extract({ path: entry.songPath });
-  await promisify(pipeline)(response.data, unzip);
+  await pipelineAsync(response.data, unzip);
+  await buggyCheck(entry.songPath);
+  const mp3File = await getMp3File(entry.songPath);
+  const smFile = await getSmFile(entry.songPath);
+  if (!mp3File) {
+    throw new Error('No song mp3 file in reply from server');
+  }
+  if (!smFile) {
+    throw new Error('No song SM file in reply from server');
+  }
+  const mp3NameShouldBe = `${entry.songName}.mp3`;
+  if (path.basename(mp3File) !== mp3NameShouldBe) {
+    await fse.rename(mp3File, path.join(entry.songPath, mp3NameShouldBe));
+    await fse.rename(smFile, path.join(entry.songPath, `${entry.songName}.sm`));
+  }
   try {
     await maybeSetBackground(entry.from, entry.songPath);
   } catch (err) {
@@ -53,20 +81,21 @@ async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
   const all = await promiseMap(entries, async (entry): Promise<TrackPlan> => {
     const from = entry;
     const albumFromDir = path.dirname(entry)
-      .replace(args.inputDir, '')
       .split('/')
-      .filter((el) => el)[0];
-    const toDir = args.keepDirs ? albumFromDir : argv.album || '.';
+      .filter((el) => el)
+      .reverse()[0];
+    const toDir = args.keepDirs ? albumFromDir : args.album || '.';
     const toPath = path.join(args.outputDir, toDir);
-    const songName = path.basename(entry).replace('.mp3', '');
+    // const songName = path.basename(entry).replace('.mp3', '');
+    const songName = await getSongName(entry);
     const songPath = path.join(toPath, songName);
-    const smFiles = (await getSmFiles(songPath)).length !== 0;
+    const smFilesExist = (await getSmFile(songPath)) !== null;
     return {
-      from, albumFromDir, toDir, toPath, songName, songPath, smFiles,
+      from, albumFromDir, toDir, toPath, songName, songPath, smFilesExist,
     };
   }, 3);
   if (args.skipExisting) {
-    return all.filter((entry) => !entry.smFiles);
+    return all.filter((entry) => !entry.smFilesExist);
   }
   return all;
 }

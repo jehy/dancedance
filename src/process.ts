@@ -40,7 +40,7 @@ async function buggyCheck(songPath: string) {
 async function convertViaServer(client: AxiosInstance, entry: TrackPlan) {
   const form = new FormData();
   // @ts-ignore formData не понимает что ему можно выдать стрим
-  form.append('song', fse.createReadStream(entry.from));
+  form.append('song', fse.createReadStream(entry.from), { filename: 'song.mp3' });
   const response = await client.post('plain', form, {
     headers: {
       'Content-Type': `multipart/form-data; boundary=${form.getBoundary()}`,
@@ -77,7 +77,7 @@ async function convertTrack(covertOptions: CovertOptions) {
   } = covertOptions;
   progress.update({ songName: entry.songName });
   if (entry.reuse) {
-    await fse.ensureDir(entry.toDir);
+    await fse.ensureDir(entry.songPath);
     const mp3Path = path.join(entry.songPath, `${entry.songName}.mp3`);
     await fse.copy(entry.from, mp3Path);
     const smPath = mp3Path.replace('.mp3', '.sm');
@@ -97,9 +97,9 @@ async function convertTrack(covertOptions: CovertOptions) {
 }
 
 async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
-  const searchPath = path.join(args.inputDir, args.inputMask);
-  console.log(`Processing tracks in ${searchPath}`);
-  const entries = await promisify(glob)(searchPath);
+  console.log(`Processing tracks in ${args.inputDir}`);
+  const searchDir = path.normalize(args.inputDir) + path.sep;
+  const entries = await promisify(glob)(args.inputMask, { cwd: searchDir, absolute: true });
   const all = await promiseMap(entries, async (entry): Promise<TrackPlan> => {
     const from = entry;
     const toDir = await getNewFolderName(entry, args);

@@ -68,9 +68,9 @@ export async function getSongName(inputMp3Path: string) {
   return validFileName(name);
 }
 
-export async function getNewFolderName(entry: string, options: Input): Promise<string> {
+export async function getNewFolderName(inputMp3Path: string, options: Input): Promise<string> {
   if (options.album === 'folder') {
-    const name = path.dirname(entry)
+    const name = path.dirname(inputMp3Path)
       .split('/')
       .filter((el) => el)
       .reverse()[0];
@@ -80,7 +80,7 @@ export async function getNewFolderName(entry: string, options: Input): Promise<s
     return '.';
   }
 
-  const { artist, album } = (await getSongMeta(entry));
+  const { artist, album } = (await getSongMeta(inputMp3Path));
   const fallback = 'unknown';
   if (options.album === 'artist') {
     return validFileName(artist || fallback);

@@ -70,23 +70,24 @@ export async function getSongName(inputMp3Path: string) {
 
 export async function getNewFolderName(entry: string, options: Input): Promise<string> {
   if (options.album === 'folder') {
-    return path.dirname(entry)
+    const name = path.dirname(entry)
       .split('/')
       .filter((el) => el)
       .reverse()[0];
+    return validFileName(name);
   }
-  if (options.album === 'none' || !options.album) {
+  if (options.album === 'none') {
     return '.';
   }
 
   const { artist, album } = (await getSongMeta(entry));
   const fallback = 'unknown';
   if (options.album === 'artist') {
-    return artist || fallback;
+    return validFileName(artist || fallback);
   }
   if (options.album === 'artistAlbum') {
     const title = [artist || fallback, album || fallback];
-    return title.join(' - ');
+    return validFileName(title.join(' - '));
   }
   throw new Error(`Unknown value of options.album = ${options.album}`);
 }

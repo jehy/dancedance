@@ -16,6 +16,7 @@ export type Input = {
   reuseSteps: boolean,
   customServer: string,
   addBackground: boolean,
+  albumPrefix: string,
 };
 
 const options = {
@@ -69,6 +70,10 @@ const options = {
     description: 'skip processing already processed',
   },
   customServer: {
+    type: 'string',
+    default: '',
+  },
+  albumPrefix: {
     type: 'string',
     default: '',
   },

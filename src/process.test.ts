@@ -24,6 +24,7 @@ const defaultArgs: DefaultArgs = {
   addBackground: true,
   album: 'none',
   customServer: '',
+  albumPrefix: '',
 };
 
 type CheckFiles = {

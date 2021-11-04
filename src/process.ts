@@ -98,12 +98,12 @@ async function convertTrack(covertOptions: CovertOptions) {
 
 async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
   const searchPath = path.join(args.inputDir, args.inputMask);
-  console.log(`searchPath: ${searchPath}`);
+  console.log(`Processing tracks in ${searchPath}`);
   const entries = await promisify(glob)(searchPath);
   const all = await promiseMap(entries, async (entry): Promise<TrackPlan> => {
     const from = entry;
     const toDir = await getNewFolderName(entry, args);
-    const toPath = path.join(args.outputDir, toDir);
+    const toPath = path.join(args.outputDir, `${args.albumPrefix}${toDir}`);
     const songName = await getSongName(entry);
     const songPath = path.join(toPath, songName);
     const alreadyConverted = (await getSmFileFromDir(songPath)) !== null;
@@ -122,6 +122,9 @@ async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
 export async function run(args: Input) {
   if (!await fse.pathExists(args.outputDir)) {
     throw new Error(`Dir ${args.outputDir} does not exists, nowhere to output!`);
+  }
+  if (args.albumPrefix && args.album === 'none') {
+    throw new Error('albumPrefix can only be used with album!');
   }
   const plan = await getProcessPlan(args);
   const progress = new SingleBar({

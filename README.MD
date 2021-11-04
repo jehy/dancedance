@@ -25,6 +25,7 @@ Use --help command to see details:
 * `customServer: string` custom server http url
 * `reuseSteps: boolean` don't generate SM files, just copy them to new folder structure
 * `addBackground: boolean` add background for tracks where available
+* `albumPrefix: boolean` add prefix to folder if you wanna differentiate machine generated songs
 ## Sample usage
 ```bash
 dancedance --inputDir ~/Downloads/step --outputDir /opt/stepmania/Songs/  --keepDirs true --concurrency 5 --token *** --skipExisting true

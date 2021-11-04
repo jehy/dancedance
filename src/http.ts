@@ -3,7 +3,7 @@ import axios from 'axios';
 import type { Input } from './input';
 
 export function getAxiosInstance(args: Input): AxiosInstance {
-  const url = args.customServer || (args.server === 'jehy' ? 'dummy' : 'http://localhost:8888/');
+  const url = args.customServer || (args.server === 'jehy' ? 'http://step.jehy.ru:8888/' : 'http://localhost:8888/');
   return axios.create({
     baseURL: url,
     timeout: 16 * 60 * 1000, // 16 minutes

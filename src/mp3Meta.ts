@@ -5,19 +5,17 @@ import jschardet from 'jschardet';
 import encoder from 'encoding';
 import { parseFile } from 'music-metadata';
 import path from 'path';
+import type { Input } from './input';
 
 const convertToUtf = (text: string, textExtension: string) => {
   const probeString = `${text}${textExtension}`;
   const { encoding } = jschardet.detect(probeString);
 
-  if (encoding === 'ascii' || encoding === 'UTF-8') {
+  if (['ascii', 'UTF-8'].includes(encoding)) {
     // Encoding is good to go
     return text;
-  } if (
-    encoding === 'windows-1251'
-        || encoding === 'windows-1252'
-        || encoding === 'KOI8-R'
-  ) {
+  }
+  if (['windows-1251', 'windows-1252', 'KOI8-R'].includes(encoding)) {
     // Seems to be OK
     return encoder.convert(text, 'UTF-8', encoding).toString();
   }
@@ -25,16 +23,12 @@ const convertToUtf = (text: string, textExtension: string) => {
   // Let's probe manually
 
   if (
-    jschardet.detect(
-      encoder.convert(probeString, 'UTF-8', 'windows-1251').toString(),
-    ).encoding === 'ascii'
+    jschardet.detect(encoder.convert(probeString, 'UTF-8', 'windows-1251').toString()).encoding === 'ascii'
   ) {
     // Looks like it's 1251
     return encoder.convert(text, 'UTF-8', 'windows-1251').toString();
   } if (
-    jschardet.detect(
-      encoder.convert(probeString, 'UTF-8', 'windows-1252').toString(),
-    ).encoding === 'ascii'
+    jschardet.detect(encoder.convert(probeString, 'UTF-8', 'windows-1252').toString()).encoding === 'ascii'
   ) {
     // Looks like it's 1252
     return encoder.convert(text, 'UTF-8', 'windows-1252').toString();
@@ -51,10 +45,18 @@ const convertLanguage = (text: string) => new CyrillicToTranslit().transform(tex
 
 const validFileName = (text: string) => sanitize(convertLanguage(text)).replace(/\./g, '_');
 
-export async function getSongName(inputMp3Path: string) {
-  let { artist, title } = (await parseFile(inputMp3Path)).common;
+// TODO: fix X-MAC-CYRILLIC issue
+
+export async function getSongMeta(inputMp3Path: string) {
+  let { artist, title, album } = (await parseFile(inputMp3Path)).common;
   artist = convertToUtf(artist || '', title || '');
   title = convertToUtf(title || '', artist || '');
+  album = convertToUtf(album || '', artist || '');
+  return { artist, title, album };
+}
+
+export async function getSongName(inputMp3Path: string) {
+  const { artist, title } = (await getSongMeta(inputMp3Path));
   let name = path.basename(inputMp3Path);
   if (title && artist) {
     name = `${title} (${artist})`;
@@ -66,4 +68,25 @@ export async function getSongName(inputMp3Path: string) {
   return validFileName(name);
 }
 
-// TODO: fix X-MAC-CYRILLIC issue
+export async function getNewFolderName(entry: string, options: Input): Promise<string> {
+  if (options.album === 'folder') {
+    return path.dirname(entry)
+      .split('/')
+      .filter((el) => el)
+      .reverse()[0];
+  }
+  if (options.album === 'none' || !options.album) {
+    return '.';
+  }
+
+  const { artist, album } = (await getSongMeta(entry));
+  const fallback = 'unknown';
+  if (options.album === 'artist') {
+    return artist || fallback;
+  }
+  if (options.album === 'artistAlbum') {
+    const title = [artist || fallback, album || fallback];
+    return title.join(' - ');
+  }
+  throw new Error(`Unknown value of options.album = ${options.album}`);
+}

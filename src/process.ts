@@ -5,9 +5,8 @@ import type { AxiosInstance } from 'axios';
 import { Presets, SingleBar } from 'cli-progress';
 import FormData from 'form-data';
 import fse from 'fs-extra';
-import unzipper from 'unzipper';
+import unzip from 'unzip-stream';
 import promiseMap from 'promise.map';
-// @ts-ignore
 import type { Input } from './input';
 import { maybeSetBackground } from './background';
 import { getAxiosInstance } from './http';
@@ -25,18 +24,6 @@ type TrackPlan = {
   reuse: boolean,
 };
 
-async function buggyCheck(songPath: string) {
-// unzipper is buggy and exists before flushing on disk :(
-  for (let i = 0; i < 5; i++) {
-    const mp3File = await getMp3FileFromDir(songPath);
-    const smFile = await getSmFileFromDir(songPath);
-    if (mp3File && smFile) {
-      return;
-    }
-    await promisify(setTimeout)(i * 100);
-  }
-}
-
 async function convertViaServer(client: AxiosInstance, entry: TrackPlan) {
   const form = new FormData();
   // @ts-ignore formData не понимает что ему можно выдать стрим
@@ -46,9 +33,8 @@ async function convertViaServer(client: AxiosInstance, entry: TrackPlan) {
       'Content-Type': `multipart/form-data; boundary=${form.getBoundary()}`,
     },
   });
-  const unzip = unzipper.Extract({ path: entry.songPath });
-  await pipelineAsync(response.data, unzip);
-  await buggyCheck(entry.songPath);
+  const unzipStream = unzip.Extract({ path: entry.songPath });
+  await pipelineAsync(response.data, unzipStream);
   const mp3File = await getMp3FileFromDir(entry.songPath);
   const smFile = await getSmFileFromDir(entry.songPath);
   if (!mp3File) {

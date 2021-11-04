@@ -11,6 +11,45 @@ jest.mock('./http', () => ({
   })),
 }));
 
+type DefaultArgs = Omit<Input, 'outputDir'>;
+
+const defaultArgs: DefaultArgs = {
+  concurrency: 1,
+  token: 'dummy',
+  inputDir: path.join(__dirname, 'test'),
+  skipExisting: true,
+  reuseSteps: false,
+  server: 'local',
+  inputMask: '**/*.mp3',
+  addBackground: true,
+  album: 'none',
+  customServer: '',
+  albumPrefix: '',
+};
+
+type CheckFiles = {
+  outputSongDir: string,
+  mp3File: string,
+  smFile: string,
+  backgroundOriginalFile: string,
+  backgroundFile : string,
+};
+
+function checkFiles(outputSongDir: string, songNameAndFile: string):void {
+  const fileList: CheckFiles = {
+    outputSongDir,
+    mp3File: path.join(outputSongDir, `/${songNameAndFile}.mp3`),
+    smFile: path.join(outputSongDir, `/${songNameAndFile}.sm`),
+    backgroundOriginalFile: path.join(outputSongDir, '/background.original.jpeg'),
+    backgroundFile: path.join(outputSongDir, '/background.jpeg'),
+  };
+  Object.entries(fileList).forEach(([type, filePath]) => {
+    if (!fse.existsSync(filePath)) {
+      throw new Error(`${type} does not exists - no ${filePath}`);
+    }
+  });
+}
+
 describe('processing test', () => {
   describe('simple test', () => {
     let tempDir: DirResult;
@@ -25,75 +64,38 @@ describe('processing test', () => {
       const songNameAndFile = 'Impact Moderato (Kevin MacLeod)';
       const albumName = 'folderName';
       const args: Input = {
-        concurrency: 1,
-        token: 'dummy',
-        keepDirs: true,
-        inputDir: path.join(__dirname, 'test'),
+        ...defaultArgs,
+        album: 'folder',
         outputDir: tempDir.name,
-        server: 'local',
-        inputMask: '**/*.mp3',
       };
       await run(args);
       const outputSongDir = path.join(tempDir.name, albumName, songNameAndFile);
-      const mp3File = path.join(outputSongDir, `/${songNameAndFile}.mp3`);
-      const smFile = path.join(outputSongDir, `/${songNameAndFile}.sm`);
-      const backgroundOriginalFile = path.join(outputSongDir, '/background.original.jpeg');
-      const backgroundFile = path.join(outputSongDir, '/background.jpeg');
-      expect(fse.existsSync(outputSongDir)).toBeTruthy();
-      expect(fse.existsSync(mp3File)).toBeTruthy();
-      expect(fse.existsSync(smFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundOriginalFile)).toBeTruthy();
+      checkFiles(outputSongDir, songNameAndFile);
     });
 
     it('should put mp3 in root folder if nothing specified', async () => {
       const songNameAndFile = 'Impact Moderato (Kevin MacLeod)';
       const args: Input = {
-        concurrency: 1,
-        token: 'dummy',
-        keepDirs: false,
-        inputDir: path.join(__dirname, 'test'),
+        ...defaultArgs,
         outputDir: tempDir.name,
-        server: 'local',
-        inputMask: '**/*.mp3',
+        album: 'none',
       };
       await run(args);
       const outputSongDir = path.join(tempDir.name, songNameAndFile);
-      const mp3File = path.join(outputSongDir, `/${songNameAndFile}.mp3`);
-      const smFile = path.join(outputSongDir, `/${songNameAndFile}.sm`);
-      const backgroundOriginalFile = path.join(outputSongDir, '/background.original.jpeg');
-      const backgroundFile = path.join(outputSongDir, '/background.jpeg');
-      expect(fse.existsSync(outputSongDir)).toBeTruthy();
-      expect(fse.existsSync(mp3File)).toBeTruthy();
-      expect(fse.existsSync(smFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundOriginalFile)).toBeTruthy();
+      checkFiles(outputSongDir, songNameAndFile);
     });
 
-    it('should put mp3 in album folder if nothing specified', async () => {
+    it('should put mp3 in artist folder if artist specified', async () => {
       const songNameAndFile = 'Impact Moderato (Kevin MacLeod)';
-      const albumName = 'folderName';
+      const albumName = 'Kevin MacLeod';
       const args: Input = {
-        concurrency: 1,
-        token: 'dummy',
-        keepDirs: false,
-        inputDir: path.join(__dirname, 'test'),
+        ...defaultArgs,
         outputDir: tempDir.name,
-        server: 'local',
-        inputMask: '**/*.mp3',
-        album: albumName,
+        album: 'artist',
       };
       await run(args);
       const outputSongDir = path.join(tempDir.name, albumName, songNameAndFile);
-      const mp3File = path.join(outputSongDir, `/${songNameAndFile}.mp3`);
-      const smFile = path.join(outputSongDir, `/${songNameAndFile}.sm`);
-      const backgroundOriginalFile = path.join(outputSongDir, '/background.original.jpeg');
-      const backgroundFile = path.join(outputSongDir, '/background.jpeg');
-      expect(fse.existsSync(outputSongDir)).toBeTruthy();
-      expect(fse.existsSync(mp3File)).toBeTruthy();
-      expect(fse.existsSync(smFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundFile)).toBeTruthy();
-      expect(fse.existsSync(backgroundOriginalFile)).toBeTruthy();
+      checkFiles(outputSongDir, songNameAndFile);
     });
   });
 });

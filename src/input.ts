@@ -17,6 +17,7 @@ export type Input = {
   customServer: string,
   addBackground: boolean,
   albumPrefix: string,
+  progress: boolean,
 };
 
 const options = {
@@ -78,6 +79,10 @@ const options = {
     default: '',
   },
   addBackground: {
+    type: 'boolean',
+    default: true,
+  },
+  progress: {
     type: 'boolean',
     default: true,
   },

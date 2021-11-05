@@ -25,6 +25,7 @@ const defaultArgs: DefaultArgs = {
   album: 'none',
   customServer: '',
   albumPrefix: '',
+  progress: true,
 };
 
 type CheckFiles = {

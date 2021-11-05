@@ -6,12 +6,15 @@ import { Presets, SingleBar } from 'cli-progress';
 import FormData from 'form-data';
 import fse from 'fs-extra';
 import unzip from 'unzip-stream';
-import promiseMap from 'promise.map';
+import promiseMap from 'p-map';
+import Debug from 'debug';
 import type { Input } from './input';
 import { maybeSetBackground } from './background';
 import { getAxiosInstance } from './http';
 import { getMp3FileFromDir, getSmFileFromDir, pipelineAsync } from './util';
 import { getNewFolderName, getSongName } from './mp3Meta';
+
+const debug = Debug('dancedance:process');
 
 type TrackPlan = {
   from: string,
@@ -28,26 +31,43 @@ async function convertViaServer(client: AxiosInstance, entry: TrackPlan) {
   const form = new FormData();
   // @ts-ignore formData не понимает что ему можно выдать стрим
   form.append('song', fse.createReadStream(entry.from), { filename: 'song.mp3' });
+  debug('posting request to server');
   const response = await client.post('plain', form, {
     headers: {
       'Content-Type': `multipart/form-data; boundary=${form.getBoundary()}`,
     },
   });
+  debug('waiting for reply and saving data');
+  await fse.ensureDir(entry.songPath);
+  const zipPath = path.join(entry.songPath, path.sep, 'song.zip');
+  await pipelineAsync(response.data, fse.createWriteStream(zipPath));
+  const { size } = await fse.stat(zipPath);
+  if (size < 300 * 1024) {
+    // bad archives fuck up zip decompression so here's a premature check
+    console.log(`Too little archive ${size / 1024}KB for ${entry.songPath}`);
+    throw new Error('BAD_REPLY');
+  }
+  debug('data saved, extracting');
   const unzipStream = unzip.Extract({ path: entry.songPath });
-  await pipelineAsync(response.data, unzipStream);
+  await pipelineAsync(fse.createReadStream(zipPath), unzipStream);
+  debug('reply extracted');
   const mp3File = await getMp3FileFromDir(entry.songPath);
   const smFile = await getSmFileFromDir(entry.songPath);
   if (!mp3File) {
-    throw new Error('No song mp3 file in reply from server');
+    console.log(`No song mp3 file in reply from server, check ${entry.songPath}`);
+    throw new Error('NO_MP3');
   }
   if (!smFile) {
-    throw new Error('No song SM file in reply from server');
+    console.log(`No song SM file in reply from server, check ${entry.songPath}`);
+    throw new Error('NO_SM');
   }
+  await fse.unlink(zipPath);
   const mp3NameShouldBe = `${entry.songName}.mp3`;
   if (path.basename(mp3File) !== mp3NameShouldBe) {
     await fse.rename(mp3File, path.join(entry.songPath, mp3NameShouldBe));
     await fse.rename(smFile, path.join(entry.songPath, `${entry.songName}.sm`));
   }
+  debug('processing finished');
 }
 
 type CovertOptions = {
@@ -63,6 +83,7 @@ async function convertTrack(covertOptions: CovertOptions) {
   } = covertOptions;
   progress.update({ songName: entry.songName });
   if (entry.reuse) {
+    debug('reusing existing steps');
     await fse.ensureDir(entry.songPath);
     const mp3Path = path.join(entry.songPath, `${entry.songName}.mp3`);
     await fse.copy(entry.from, mp3Path);
@@ -75,7 +96,9 @@ async function convertTrack(covertOptions: CovertOptions) {
     return;
   }
   try {
+    debug('adding background');
     await maybeSetBackground(entry.from, entry.songPath);
+    debug('background added');
   } catch (err) {
     console.log('Failed to set background');
     console.log(err);
@@ -86,11 +109,22 @@ async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
   console.log(`Processing tracks in ${args.inputDir}`);
   const searchDir = path.normalize(args.inputDir) + path.sep;
   const entries = await promisify(glob)(args.inputMask, { cwd: searchDir, absolute: true });
+  const songFoldersPlanned = new Set();
   const all = await promiseMap(entries, async (entry): Promise<TrackPlan> => {
     const from = entry;
     const toDir = await getNewFolderName(entry, args);
     const toPath = path.join(args.outputDir, `${args.albumPrefix}${toDir}`);
-    const songName = await getSongName(entry);
+    const songNameNoIndex = await getSongName(entry);
+    let songName = songNameNoIndex;
+    // avoid collision with same song names (ex same song from different albums)
+    for (let i = 2; i < 1000; i++) {
+      if (songFoldersPlanned.has(songName)) {
+        songName = `${songNameNoIndex}_${i}`;
+      } else {
+        break;
+      }
+    }
+    songFoldersPlanned.add(songName);
     const songPath = path.join(toPath, songName);
     const alreadyConverted = (await getSmFileFromDir(songPath)) !== null;
     const smExists = (fse.existsSync(from.replace('.mp3', '.sm')));
@@ -98,7 +132,7 @@ async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
     return {
       from, toDir, toPath, songName, songPath, alreadyConverted, smExists, reuse,
     };
-  }, 3);
+  }, { concurrency: 3 });
   if (args.skipExisting) {
     return all.filter((entry) => !entry.alreadyConverted);
   }
@@ -117,23 +151,28 @@ export async function run(args: Input) {
     format: 'Converting {songName} [{bar}] {percentage}% '
             + '| ETA: {eta_formatted} | spent {duration_formatted} | done {value}/{total}',
   }, Presets.shades_classic);
-  progress.start(plan.length, 0);
+  if (args.progress) {
+    progress.start(plan.length, 0);
+  }
   const client = getAxiosInstance(args);
 
   await promiseMap(plan, async (entry) => {
     try {
+      debug('converting track', entry.from);
       await convertTrack({
         client,
         entry,
         progress,
         addBackground: Boolean(args.addBackground),
       });
+      debug('converted track', entry.songName);
     } catch (err) {
       console.log(`Failed to convert ${entry.songName}`);
       console.log(err);
     }
     progress.increment();
-  }, Number(args.concurrency)); // when using npm start, number get passed as a string
+    // when using npm start, number get passed as a string
+  }, { concurrency: Number(args.concurrency) });
   progress.render();
   progress.stop();
   console.log('Processing finished');

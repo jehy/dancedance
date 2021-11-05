@@ -5,7 +5,7 @@ import type { AxiosInstance } from 'axios';
 import { Presets, SingleBar } from 'cli-progress';
 import FormData from 'form-data';
 import fse from 'fs-extra';
-import unzip from 'unzip-stream';
+import unzip from 'extract-zip';
 import promiseMap from 'p-map';
 import Debug from 'debug';
 import type { Input } from './input';
@@ -41,15 +41,8 @@ async function convertViaServer(client: AxiosInstance, entry: TrackPlan) {
   await fse.ensureDir(entry.songPath);
   const zipPath = path.join(entry.songPath, path.sep, 'song.zip');
   await pipelineAsync(response.data, fse.createWriteStream(zipPath));
-  const { size } = await fse.stat(zipPath);
-  if (size < 300 * 1024) {
-    // bad archives fuck up zip decompression so here's a premature check
-    console.log(`Too little archive ${size / 1024}KB for ${entry.songPath}`);
-    throw new Error('BAD_REPLY');
-  }
   debug('data saved, extracting');
-  const unzipStream = unzip.Extract({ path: entry.songPath });
-  await pipelineAsync(fse.createReadStream(zipPath), unzipStream);
+  await unzip(zipPath, { dir: entry.songPath });
   debug('reply extracted');
   const mp3File = await getMp3FileFromDir(entry.songPath);
   const smFile = await getSmFileFromDir(entry.songPath);

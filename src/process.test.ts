@@ -5,9 +5,11 @@ import Tmp from 'tmp';
 import type { Input } from './input';
 import { run } from './process';
 
+let expectedReply: string;
+
 jest.mock('./http', () => ({
   getAxiosInstance: jest.fn().mockImplementation(() => ({
-    post: async () => ({ data: fse.createReadStream(path.join(__dirname, '/test/test.zip')) }),
+    post: async () => ({ data: fse.createReadStream(path.join(__dirname, expectedReply)) }),
   })),
 }));
 
@@ -52,6 +54,7 @@ function checkFiles(outputSongDir: string, songNameAndFile: string):void {
 }
 
 describe('processing test', () => {
+  expectedReply = '/test/fine-zip/test.zip';
   describe('simple test', () => {
     let tempDir: DirResult;
     beforeEach(() => {
@@ -97,6 +100,22 @@ describe('processing test', () => {
       await run(args);
       const outputSongDir = path.join(tempDir.name, albumName, songNameAndFile);
       checkFiles(outputSongDir, songNameAndFile);
+    });
+    it('should deal with bad archives', async () => {
+      const songNameAndFile = 'Impact Moderato (Kevin MacLeod)';
+      const albumName = 'Kevin MacLeod';
+      expectedReply = '/test/empty-zip/empty.zip';
+      const args: Input = {
+        ...defaultArgs,
+        outputDir: tempDir.name,
+        album: 'artist',
+      };
+      await run(args);
+      const outputSongDir = path.join(tempDir.name, albumName, songNameAndFile);
+      const zipFile = path.join(outputSongDir, '/song.zip');
+      if (!fse.existsSync(zipFile)) {
+        throw new Error(`zip file does not exists - no ${zipFile}`);
+      }
     });
   });
 });

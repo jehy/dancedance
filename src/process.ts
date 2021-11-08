@@ -132,7 +132,20 @@ async function getProcessPlan(args: Input):Promise<Array<TrackPlan>> {
   return all;
 }
 
+function normalize(args: Input) {
+  // when running from npm start or npm debug, yargs messes up variable types
+  // eslint-disable-next-line no-param-reassign
+  args.concurrency = Number(args.concurrency);
+  // @ts-ignore
+  // eslint-disable-next-line no-param-reassign
+  args.progress = args.progress === true || args.progress === 'true';
+  // @ts-ignore
+  // eslint-disable-next-line no-param-reassign
+  args.reuseSteps = args.reuseSteps === true || args.reuseSteps === 'true';
+}
+
 export async function run(args: Input) {
+  normalize(args);
   if (!await fse.pathExists(args.outputDir)) {
     throw new Error(`Dir ${args.outputDir} does not exists, nowhere to output!`);
   }
@@ -165,7 +178,7 @@ export async function run(args: Input) {
     }
     progress.increment();
     // when using npm start, number get passed as a string
-  }, { concurrency: Number(args.concurrency) });
+  }, { concurrency: args.concurrency });
   progress.render();
   progress.stop();
   console.log('Processing finished');

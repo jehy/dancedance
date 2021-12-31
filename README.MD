@@ -28,5 +28,5 @@ Use --help command to see details:
 * `albumPrefix: boolean` add prefix to folder if you wanna differentiate machine generated songs
 ## Sample usage
 ```bash
-dancedance --inputDir ~/Downloads/step --outputDir /opt/stepmania/Songs/  --keepDirs true --concurrency 5 --token *** --skipExisting true
+dancedance --inputDir ~/Downloads/step --outputDir /opt/stepmania/Songs/  --album folder --concurrency 5 --token *** --skipExisting true
 ``` [boolean]
